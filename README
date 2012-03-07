@@ -3,11 +3,7 @@ mod_rpaf - reverse proxy add forward
 This module does the opposite of mod_proxy_add_forward written
 by Ask Bjørn Hansen. http://develooper.com/code/mpaf/
 
-Compile and Install for 1.3:
-
-apxs -i -a -c mod_rpaf.c 
-
-Compile and Install for 2.0:
+Compile and Install:
 
 apxs -i -c -n mod_rpaf-2.0.so mod_rpaf-2.0.c
 
