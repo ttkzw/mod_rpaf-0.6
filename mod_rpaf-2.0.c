@@ -169,7 +169,7 @@ static int change_remote_ip(request_rec *r) {
            that instead of X-Forwarded-For by default */
         if (cfg->headername && (fwdvalue = apr_table_get(r->headers_in, cfg->headername))) {
             //
-        } else if (fwdvalue = apr_table_get(r->headers_in, "X-Forwarded-For")) {
+        } else if ((fwdvalue = apr_table_get(r->headers_in, "X-Forwarded-For"))) {
             //
         } else {
             return DECLINED;
@@ -192,12 +192,12 @@ static int change_remote_ip(request_rec *r) {
             r->connection->remote_addr->sa.sin.sin_family = AF_INET;
             if (cfg->sethostname) {
                 const char *hostvalue;
-                if (hostvalue = apr_table_get(r->headers_in, "X-Forwarded-Host")) {
+                if ((hostvalue = apr_table_get(r->headers_in, "X-Forwarded-Host"))) {
                     /* 2.0 proxy frontend or 1.3 => 1.3.25 proxy frontend */
                     apr_table_set(r->headers_in, "Host", apr_pstrdup(r->pool, hostvalue));
                     r->hostname = apr_pstrdup(r->pool, hostvalue);
                     ap_update_vhost_from_headers(r);
-                } else if (hostvalue = apr_table_get(r->headers_in, "X-Host")) {
+                } else if ((hostvalue = apr_table_get(r->headers_in, "X-Host"))) {
                     /* 1.3 proxy frontend with mod_proxy_add_forward */
                     apr_table_set(r->headers_in, "Host", apr_pstrdup(r->pool, hostvalue));
                     r->hostname = apr_pstrdup(r->pool, hostvalue);
