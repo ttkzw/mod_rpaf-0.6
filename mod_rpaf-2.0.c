@@ -71,6 +71,7 @@
 #include "http_protocol.h"
 #include "http_vhost.h"
 #include "apr_strings.h"
+#include "arpa/inet.h"
 
 module AP_MODULE_DECLARE_DATA rpaf_module;
 
