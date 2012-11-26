@@ -6,6 +6,7 @@ This module was originally written by Thomas Eibner <thomas@stderr.net>.
 
 The differences from the original module are:
 * Feature: Support for partial IP address as '10.1.' for RPAFproxy_ips. The author of this patch is unknown.
+* Feature: Recursive ip extraction with RPAFrecursive directive.
 * Bugfix: In the case of APR_HAVE_IPV6-enabled build, access control of Order/Allow/Deny does not work correctly.
 * Support of httpd 1.3 was deleted.
 
@@ -29,6 +30,11 @@ or simply try:
  # Allows you to change which header mod_rpaf looks
  # for when trying to find the ip the that is forwarding
  # our requests
+ RPAFrecursive On
+ # If recursive search is disabled, remote address is replaced by the
+ # last address in RPAFheader directive. If recursive search is
+ # enabled, remote address is replaced by the last non-trusted address
+ # in RPAFheader directive.
 
 ## Author
 * Thomas Eibner <thomas@stderr.net>
