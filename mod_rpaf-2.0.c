@@ -72,6 +72,7 @@
 #include "http_vhost.h"
 #include "apr_strings.h"
 #include "arpa/inet.h"
+#include <ctype.h> // isspace
 
 module AP_MODULE_DECLARE_DATA rpaf_module;
 
@@ -99,6 +100,33 @@ static void *rpaf_create_server_cfg(apr_pool_t *p, server_rec *s) {
     cfg->sethostname = 0;
 
     return (void *)cfg;
+}
+
+/* It was ported from https://github.com/gnif/mod_rpaf */
+/* quick check for ipv4/6 likelihood; similar to Apache2.4 mod_remoteip check */
+static int rpaf_looks_like_ip(const char *ip) {
+    static const char ipv4_set[] = "0123456789./";
+    static const char ipv6_set[] = "0123456789abcdef:/.";
+
+    /* zero length value is not valid */
+    if (!*ip)
+      return 0;
+
+    const char *ptr    = ip;
+
+    /* determine if this could be a IPv6 or IPv4 address */
+    if (strchr(ip, ':'))
+    {
+        while(*ptr && strchr(ipv6_set, *ptr) != NULL)
+            ++ptr;
+    }
+    else
+    {
+        while(*ptr && strchr(ipv4_set, *ptr) != NULL)
+            ++ptr;
+    }
+
+    return (*ptr == '\0');
 }
 
 static const char *rpaf_set_proxy_ip(cmd_parms *cmd, void *dummy, const char *proxy_ip) {
@@ -182,6 +210,8 @@ static apr_status_t rpaf_cleanup(void *data) {
 
 static int change_remote_ip(request_rec *r) {
     const char *fwdvalue;
+    const char *fwdvalue_temp;
+    int i;
     char *val;
     rpaf_server_cfg *cfg = (rpaf_server_cfg *)ap_get_module_config(r->server->module_config,
                                                                    &rpaf_module);
@@ -202,12 +232,19 @@ static int change_remote_ip(request_rec *r) {
 
         if (fwdvalue) {
             rpaf_cleanup_rec *rcr = (rpaf_cleanup_rec *)apr_pcalloc(r->pool, sizeof(rpaf_cleanup_rec));
-            apr_array_header_t *arr = apr_array_make(r->pool, 0, sizeof(char*));
-            while (*fwdvalue && (val = ap_get_token(r->pool, &fwdvalue, 1))) {
-                *(char **)apr_array_push(arr) = apr_pstrdup(r->pool, val);
-                if (*fwdvalue != '\0')
-                    ++fwdvalue;
+            apr_array_header_t *arr = apr_array_make(r->pool, 4, sizeof(char *));
+
+            fwdvalue_temp = apr_pstrdup(r->pool, fwdvalue);
+            while ((val = strsep((char **)&fwdvalue_temp, ",")) != NULL) {
+                /* strip leading and trailing whitespace */
+                while(isspace(*val))
+                    ++val;
+                for (i = strlen(val) - 1; i > 0 && isspace(val[i]); i--)
+                    val[i] = '\0';
+                if (rpaf_looks_like_ip(val))
+                    *(char **)apr_array_push(arr) = apr_pstrdup(r->pool, val);
             }
+
             rcr->old_ip = apr_pstrdup(r->connection->pool, r->connection->remote_ip);
             rcr->old_family = r->connection->remote_addr->sa.sin.sin_family;
             rcr->r = r;
