@@ -245,28 +245,29 @@ static int change_remote_ip(request_rec *r) {
                     *(char **)apr_array_push(arr) = apr_pstrdup(r->pool, val);
             }
 
-            rcr->old_ip = apr_pstrdup(r->connection->pool, r->connection->remote_ip);
-            rcr->old_family = r->connection->remote_addr->sa.sin.sin_family;
-            rcr->r = r;
-            apr_pool_cleanup_register(r->pool, (void *)rcr, rpaf_cleanup, apr_pool_cleanup_null);
-            r->connection->remote_ip = apr_pstrdup(r->connection->pool, extract_ip(arr, cfg->proxy_ips, cfg->recursive));
-            r->connection->remote_addr->sa.sin.sin_addr.s_addr = apr_inet_addr(r->connection->remote_ip);
-            r->connection->remote_addr->sa.sin.sin_family = AF_INET;
-            if (cfg->sethostname) {
-                const char *hostvalue;
-                if ((hostvalue = apr_table_get(r->headers_in, "X-Forwarded-Host"))) {
-                    /* 2.0 proxy frontend or 1.3 => 1.3.25 proxy frontend */
-                    apr_table_set(r->headers_in, "Host", apr_pstrdup(r->pool, hostvalue));
-                    r->hostname = apr_pstrdup(r->pool, hostvalue);
-                    ap_update_vhost_from_headers(r);
-                } else if ((hostvalue = apr_table_get(r->headers_in, "X-Host"))) {
-                    /* 1.3 proxy frontend with mod_proxy_add_forward */
-                    apr_table_set(r->headers_in, "Host", apr_pstrdup(r->pool, hostvalue));
-                    r->hostname = apr_pstrdup(r->pool, hostvalue);
-                    ap_update_vhost_from_headers(r);
+            if (arr->nelts > 0) {
+                rcr->old_ip = apr_pstrdup(r->connection->pool, r->connection->remote_ip);
+                rcr->old_family = r->connection->remote_addr->sa.sin.sin_family;
+                rcr->r = r;
+                apr_pool_cleanup_register(r->pool, (void *)rcr, rpaf_cleanup, apr_pool_cleanup_null);
+                r->connection->remote_ip = apr_pstrdup(r->connection->pool, extract_ip(arr, cfg->proxy_ips, cfg->recursive));
+                r->connection->remote_addr->sa.sin.sin_addr.s_addr = apr_inet_addr(r->connection->remote_ip);
+                r->connection->remote_addr->sa.sin.sin_family = AF_INET;
+                if (cfg->sethostname) {
+                    const char *hostvalue;
+                    if ((hostvalue = apr_table_get(r->headers_in, "X-Forwarded-Host"))) {
+                        /* 2.0 proxy frontend or 1.3 => 1.3.25 proxy frontend */
+                        apr_table_set(r->headers_in, "Host", apr_pstrdup(r->pool, hostvalue));
+                        r->hostname = apr_pstrdup(r->pool, hostvalue);
+                        ap_update_vhost_from_headers(r);
+                    } else if ((hostvalue = apr_table_get(r->headers_in, "X-Host"))) {
+                        /* 1.3 proxy frontend with mod_proxy_add_forward */
+                        apr_table_set(r->headers_in, "Host", apr_pstrdup(r->pool, hostvalue));
+                        r->hostname = apr_pstrdup(r->pool, hostvalue);
+                        ap_update_vhost_from_headers(r);
+                    }
                 }
             }
-
         }
     }
     return DECLINED;
